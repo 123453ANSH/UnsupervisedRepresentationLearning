@@ -21,7 +21,7 @@ def unpickle(file):
     return dict
 
 class RotDataset(Dataset):
-	def __init__(self, data_dir):
+	def __init__(self, data_dir, shuffle = False):
 		images = None
 		for file in os.listdir(data_dir):
 			dict = unpickle(data_dir + '/' + file)
@@ -29,7 +29,8 @@ class RotDataset(Dataset):
 				images = dict[b'data']
 			else:
 				images = np.concatenate((images, dict[b'data']), axis = 0)
-
+		if shuffle:
+			np.random.shuffle(images)
 		self.images = images.reshape(-1, 3, 32, 32)/255
 
 	def __getitem__(self, index):
@@ -42,7 +43,7 @@ class RotDataset(Dataset):
 		rotation = index % 4
 		image = self.images[index//4]
 		image = np.rot90(image, rotation, axes = (-2, -1))
-		image = torch.from_numpy(image).float()
+		image = torch.from_numpy(image.copy()).float()
 		return image, rotation
 
 
