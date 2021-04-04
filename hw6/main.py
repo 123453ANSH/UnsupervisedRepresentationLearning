@@ -46,36 +46,26 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
 def validate(val_loader, model, criterion):
     model.eval()
-    losses = None
-    accuracies = None
-    progress_bar = tqdm(range(len(val_loader)))
+    losses = []
+    accuracies = []
+    progress_bar = tqdm(val_loader)
 
-    for i, (input, target) in enumerate(val_loader):
-        next(progress_bar)
-    	#TODO: implement the validation. Remember this is validation and not training
-    	#so some things will be different.
-        N = outputs.shape[0]
+    for i, (input, target) in enumerate(progress_bar):
         outputs = model(input)
+        N = outputs.shape[0]
         loss = criterion(outputs, target)
-
-        if losses == None:
-            losses = loss
-        else:
-            losses.append(loss)
+        losses.append(loss.item())
 
         softmaxed = nn.Softmax(dim = 1)(outputs)
         one_hot_labels = torch.zeros(outputs.shape)
         one_hot_labels[torch.arange(N), target] = 1
-        accuracy = 1 - (torch.sum(torch.abs(softmaxed - one_hot_labels))/N)
+        accuracy = 1 - (torch.sum(torch.abs(softmaxed - one_hot_labels))/(2*N))
 
-        if accuracies == None:
-            accuracies = accuracy
-        else:
-            accuracies.append(accuracy)
+        accuracies.append(accuracy)
 
     #returns mean of loss and accuracy over all training examples
-    entries = (N * (i + 1))
-    return [torch.sum(losses).item()/entries, torch.sum(accuracies).item()/entries]
+    batches = i + 1
+    return [sum(losses)/batches, sum(accuracies)/batches]
 
 
 def save_checkpoint(state, best_one, filename='rotationnetcheckpoint.pth.tar', filename2='rotationnetmodelbest.pth.tar'):
@@ -98,6 +88,8 @@ def main():
     val_dataset = RotDataset(args.data_dir + '/test')
     val_loader = DataLoader(val_dataset, batch_size = config['batch_size'])
 
+    best_loss = 10e10
+
     for epoch in range(n_epochs):
         #TODO: make your loop which trains and validates. Use the train() func
         print("============================\nEPOCH " + str(epoch) + '\n')
@@ -106,10 +98,13 @@ def main():
             print("Epoch " + str(epoch) + " finished training")
 
         loss, accuracy = validate(val_loader, model, criterion)
-        print("Loss: " + str(loss) + "  |   Accuracy: " + str(accuracy))
-	 	#TODO: Save your checkpoint
+        print("Batch Loss: " + str(loss) + "  |   Batch Accuracy: " + str(accuracy))
 
-        save_checkpoint(model.state_dict(), True)
+        best = False
+        if loss < best_loss:
+            best = True
+
+        save_checkpoint(model.state_dict(), best)
 
         print('============================')
 
