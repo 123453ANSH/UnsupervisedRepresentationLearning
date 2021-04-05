@@ -19,6 +19,8 @@ parser.add_argument('--train', action='store_true')
 parser.add_argument('--data_dir', type=str, required=True)
 parser.add_argument('--image', type=str)
 parser.add_argument('--model_number', type=str, required=True)
+parser.add_argument('--resume', action='store_true')
+parser.add_argument('--resume_epoch', type=int, required=False)
 
 args = parser.parse_args()
 
@@ -77,6 +79,11 @@ def save_checkpoint(state, best_one, filename='rotationnetcheckpoint.pth.tar', f
 def main():
     n_epochs = config["num_epochs"]
     model = ResNet(None, None, 4)
+
+    if args.resume:
+        checkpoint = torch.load('./rotationnetcheckpoint.pth.tar')
+        model.load_state_dict(checkpoint)
+
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(),
                            momentum = config['momentum'],
@@ -90,7 +97,7 @@ def main():
 
     best_loss = 10e10
 
-    for epoch in range(n_epochs):
+    for epoch in range(args.resume_epoch, n_epochs):
         #TODO: make your loop which trains and validates. Use the train() func
         print("============================\nEPOCH " + str(epoch) + '\n')
         if args.train:
@@ -103,6 +110,7 @@ def main():
         best = False
         if loss < best_loss:
             best = True
+            best_loss = loss
 
         save_checkpoint(model.state_dict(), best)
 
